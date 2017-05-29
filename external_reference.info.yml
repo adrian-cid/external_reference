@@ -1,0 +1,5 @@
+name: External Reference
+type: module
+description: External Reference
+core: 8.x
+package: Reference

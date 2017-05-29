@@ -1,0 +1,198 @@
+<?php
+
+/**
+ * @file
+ * Contains external_reference.module.
+ */
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function external_reference_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the external_reference module.
+    case 'help.page.external_reference':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('External Reference') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function external_reference_form_node_type_form_alter(&$form, FormStateInterface &$form_state, $form_id) {
+  // Geting the config.
+  $config = \Drupal::config('external_reference.settings');
+  // Getting the content types to track variable.
+  $external_reference_track = $config->get('external_reference_track');
+  // Getting the content type machine name from the actual form.
+  $content_type = $form_state->getFormObject()->getEntity()->id();
+  // Looking if the config exists for the content type.
+  if (isset($external_reference_track[$content_type])) {
+    $track = TRUE;
+    $endpoint_list = $external_reference_track[$content_type]['endpoint_list'];
+    $endpoint_individual = $external_reference_track[$content_type]['endpoint_individual'];
+  }
+  else {
+    $track = FALSE;
+    $endpoint_list = '';
+    $endpoint_individual = '';
+  }
+
+  $form['external_reference'] = [
+    '#type' => 'details',
+    '#title' => t('External Reference'),
+    '#group' => 'additional_settings',
+    '#weight' => 100,
+  ];
+  $form['external_reference']['section'] = [
+    '#type' => 'fieldset',
+    '#title' => t("Endpoints"),
+    '#attributes' => ['class' => ['fieldgroup', 'form-composite']],
+  ];
+  // Element to track the content type.
+  $form['external_reference']['section']['external_reference_track'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Activate External Reference'),
+    '#default_value' => $track,
+  ];
+
+  $form['external_reference']['endpoint_list'] = [
+    '#type' => 'textfield',
+    '#title' => t('Endpoint List'),
+    '#default_value' => $endpoint_list,
+    '#description' => t('Enter here the the endpoint that have a list of content. Example: <b>https://jsonplaceholder.typicode.com/posts</b>'),
+    '#size' => 100,
+    '#states' => [
+      // Show the field when the checkbox is checked.
+      'visible' => [
+        ':input[name="external_reference_track"]' => ['checked' => TRUE],
+      ],
+      // Set required when the checkbox is checked.
+      'required' => [
+        ':input[name="external_reference_track"]' => ['checked' => TRUE],
+      ],
+    ],
+  ];
+  $form['external_reference']['endpoint_individual'] = [
+    '#type' => 'textfield',
+    '#title' => t('Endpoint Individual'),
+    '#default_value' => $endpoint_individual,
+    '#description' => t('Enter here the the endpoint that have the information of a single content. If you access the content with id = 1 with this endpoint https://jsonplaceholder.typicode.com/posts/1 you need to write here this: <b>https://jsonplaceholder.typicode.com/posts/</b>'),
+    '#size' => 100,
+    '#states' => [
+      // Show the field when the checkbox is checked.
+      'visible' => [
+        ':input[name="external_reference_track"]' => ['checked' => TRUE],
+      ],
+      // Set required when the checkbox is checked.
+      'required' => [
+        ':input[name="external_reference_track"]' => ['checked' => TRUE],
+      ],
+    ],
+  ];
+
+  // If we are creating the content type. Putting the custom submit handler
+  // first to use the Entity->isNew() function, if the custom submit handler is
+  // the last function called always the Entity is created first.
+  array_unshift($form['actions']['save_continue']['#submit'], '_external_reference_form_node_type_submit');
+  // If we are editing the content type. Putting the custom submit handler
+  // first to use the Entity->isNew() function, if the custom submit handler is
+  // the last function called always the Entity is created first.
+  array_unshift($form['actions']['submit']['#submit'], '_external_reference_form_node_type_submit');
+}
+
+/**
+ * Custom submit handler to save the configuration variables.
+ *
+ * @param array $form
+ *   The form element.
+ * @param FormStateInterface $form_state
+ *   The form state.
+ */
+function _external_reference_form_node_type_submit(array &$form, FormStateInterface $form_state) {
+  // Getting the form values.
+  $track = $form_state->getValue('external_reference_track');
+  // Getting the content type machine name.
+  $content_type = $form_state->getFormObject()->getEntity()->id();
+  // If we will track the content type.
+  if ($track) {
+    // Getting the form values.
+    $endpoint_list = $form_state->getValue('endpoint_list');
+    $endpoint_individual = $form_state->getValue('endpoint_individual');
+    // Saving the values in the config.
+    _external_reference_save_content_type_config($content_type, $endpoint_list, $endpoint_individual);
+  }
+  // If we are not tranking the content type and it exists (is not new)
+  // we need to delete the existing config.
+  elseif (!$form_state->getFormObject()->getEntity()->isNew()) {
+    // Deleting the value from the config.
+    _external_reference_delete_content_type_config($content_type);
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function external_reference_form_node_type_delete_form_alter(&$form, FormStateInterface &$form_state, $form_id) {
+  // If we are deleting a content type.
+  $form['actions']['submit']['#submit'][] = '_external_reference_form_node_type_submit';
+}
+
+/**
+ * Save the content type config variable.
+ *
+ * @param string $content_type
+ *   Content type machine name.
+ * @param int $endpoint_list
+ *   Endpoint to retrieve the content list.
+ * @param int $endpoint_individual
+ *   Endpoint to retrieve one content.
+ */
+function _external_reference_save_content_type_config($content_type, $endpoint_list, $endpoint_individual) {
+  // Getting the config file.
+  $config = \Drupal::service('config.factory')->getEditable('external_reference.settings');
+  // Getting the variables with the content types configuration.
+  $external_reference_track = $config->get('node_revision_delete_track');
+  // Creating the content type info.
+  $content_type_info = [
+    'endpoint_list' => $endpoint_list,
+    // Adding the final /.
+    'endpoint_individual' => rtrim($endpoint_individual, '/') . '/',
+  ];
+  // Adding the info into te array.
+  $external_reference_track[$content_type] = $content_type_info;
+  // Saving the values in the config.
+  $config->set('external_reference_track', $external_reference_track)->save();
+}
+
+/**
+ * Delete the content type config variable.
+ *
+ * @param string $content_type
+ *   Content type machine name.
+ *
+ * @return bool
+ *   Return TRUE if the content type config was deleted or FALSE if not exists.
+ */
+function _external_reference_delete_content_type_config($content_type) {
+  // Getting the config file.
+  $config = \Drupal::service('config.factory')->getEditable('external_reference.settings');
+  // Getting the variables with the content types configuration.
+  $external_reference_track = $config->get('external_reference_track');
+  // Checking if the config exists.
+  if (isset($external_reference_track[$content_type])) {
+    // Deleting the value from the array.
+    unset($external_reference_track[$content_type]);
+    // Saving the values in the config.
+    $config->set('external_reference_track', $external_reference_track)->save();
+    return TRUE;
+  }
+  return FALSE;
+}
