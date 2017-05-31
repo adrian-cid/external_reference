@@ -4,6 +4,7 @@
  * @file
  * Contains external_reference.module.
  */
+
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\node\Entity\NodeType;
@@ -209,17 +210,31 @@ function external_reference_form_node_form_alter(&$form, FormStateInterface &$fo
   // Verifying if the new node should by onlyone.
   if (isset($external_reference_track) && in_array($node->getType(), array_keys($external_reference_track))) {
     // If we are trying to create a new node.
-    if ($node->isNew()) {
+    if (!$node->isNew()) {
 
-    }
-    else {
+      // Searching the id.
+      $connection = \Drupal::database();
+      $info = $connection->select('external_reference', 'er')
+        ->fields('er', ['external_id'])
+        ->condition('er.nid', $node->id())
+        ->execute()
+        ->fetchAssoc();
 
+      // Geting the config.
+      $config = \Drupal::config('external_reference.settings');
+      // Getting the content types to track variable.
+      $external_reference_track = $config->get('external_reference_track');
+      $endpoint_individual = $external_reference_track[$node->getType()]['endpoint_individual'];
+
+      $json = file_get_contents($endpoint_individual . $info['external_id']);
+      $element = json_decode($json);
+      $title = $element->hits[0]->title;
     }
     // Adding the form element.
     $form['external_reference_title'] = [
       '#type' => 'textfield',
       '#title' => t('External Reference'),
-      '#default_value' => '',
+      '#default_value' => $title,
       '#autocomplete_route_name' => 'external_reference.lieux_autocomplete',
       '#weight' => 100,
     ];
@@ -255,9 +270,9 @@ function _external_reference_form_node_submit(array &$form, FormStateInterface $
     $endpoint_list = $external_reference_track[$node->getType()]['endpoint_list'];
 
     // Searching the id.
-    $json = file_get_contents($endpoint_list);
+    $json = file_get_contents($endpoint_list . $title);
     $list = json_decode($json);
-    $id = $list[0]->id;
+    $external_id = $list->hits[0]->id;
 
     // Upserting the information.
     $connection = \Drupal::database();
@@ -266,7 +281,7 @@ function _external_reference_form_node_submit(array &$form, FormStateInterface $
       ->fields(['nid', 'external_id'])
       ->values([
         'nid' => $nid,
-        'external_id' => $id,
+        'external_id' => $external_id,
       ])->execute();
   }
 }
@@ -310,7 +325,7 @@ function external_reference_node_view(array &$build, EntityInterface $entity, En
 
     $json = file_get_contents($endpoint_individual . $info['external_id']);
     $element = json_decode($json);
-    $title = $element->title;
+    $title = $element->hits[0]->title;
 
     $build['external_reference'] = [
       '#type' => 'markup',

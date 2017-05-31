@@ -61,7 +61,7 @@ class ExternalReference extends FieldPluginBase {
 
     $json = file_get_contents($endpoint_individual . $info['external_id']);
     $element = json_decode($json);
-    $title = $element->title;
+    $title = $element->hits[0]->title;
 
     return $title;
   }

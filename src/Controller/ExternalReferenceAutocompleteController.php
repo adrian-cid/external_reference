@@ -39,7 +39,7 @@ class ExternalReferenceAutocompleteController extends ControllerBase {
     $list = json_decode($json);
     $titles = array_column($list->hits, 'title');
 
-    return new JsonResponse(array_values($titles));
+    return new JsonResponse($titles);
   }
 
 }
