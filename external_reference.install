@@ -19,7 +19,8 @@ function external_reference_schema() {
       ),
       'external_id' => array(
         'description' => 'External id.',
-        'type' => 'int',
+        'type' => 'varchar',
+        'length' => 255,
         'not null' => TRUE,
       ),
     ),

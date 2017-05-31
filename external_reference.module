@@ -70,7 +70,7 @@ function external_reference_form_node_type_form_alter(&$form, FormStateInterface
     '#type' => 'textfield',
     '#title' => t('Endpoint List'),
     '#default_value' => $endpoint_list,
-    '#description' => t('Enter here the the endpoint that have a list of content. Example: <b>https://jsonplaceholder.typicode.com/posts</b>'),
+    '#description' => t('Enter here the the endpoint that have a list of content. Example: <b>https://jsonplaceholder.typicode.com/posts/</b>'),
     '#size' => 100,
     '#states' => [
       // Show the field when the checkbox is checked.

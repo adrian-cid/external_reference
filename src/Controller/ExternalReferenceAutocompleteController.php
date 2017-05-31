@@ -34,14 +34,12 @@ class ExternalReferenceAutocompleteController extends ControllerBase {
 
     // Endpoint list.
     $endpoint_list = $external_reference_track[$content_type]['endpoint_list'];
-    // @TODO: Add the query at the end.
-    $json = file_get_contents($endpoint_list);
-    $list = json_decode($json);
-    $titles = array_column($list, 'title');
-
     $string = $request->query->get('q');
-    $matches = preg_grep("/$string/i", $titles);
-    return new JsonResponse(array_values($matches));
+    $json = file_get_contents($endpoint_list . $string);
+    $list = json_decode($json);
+    $titles = array_column($list->hits, 'title');
+
+    return new JsonResponse(array_values($titles));
   }
 
 }
