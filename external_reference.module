@@ -228,7 +228,7 @@ function external_reference_form_node_form_alter(&$form, FormStateInterface &$fo
 
       $json = file_get_contents($endpoint_individual . $info['external_id']);
       $element = json_decode($json);
-      $title = $element->hits[0]->title;
+      $title = $element->source->title;
     }
     // Adding the form element.
     $form['external_reference_title'] = [
@@ -325,7 +325,7 @@ function external_reference_node_view(array &$build, EntityInterface $entity, En
 
     $json = file_get_contents($endpoint_individual . $info['external_id']);
     $element = json_decode($json);
-    $title = $element->hits[0]->title;
+    $title = $element->source->title;
 
     $build['external_reference'] = [
       '#type' => 'markup',
