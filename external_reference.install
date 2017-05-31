@@ -1,0 +1,30 @@
+<?php
+
+/**
+ * @file
+ * Install function for the External Reference module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function external_reference_schema() {
+  $schema['external_reference'] = array(
+    'description' => 'External Reference',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'Node id.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'external_id' => array(
+        'description' => 'External id.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('nid'),
+  );
+
+  return $schema;
+}

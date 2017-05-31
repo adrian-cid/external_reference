@@ -4,6 +4,7 @@
  * @file
  * Contains external_reference.module.
  */
+
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 
@@ -195,4 +196,66 @@ function _external_reference_delete_content_type_config($content_type) {
     return TRUE;
   }
   return FALSE;
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function external_reference_form_node_form_alter(&$form, FormStateInterface &$form_state, $form_id) {
+  $external_reference_track = \Drupal::config('external_reference.settings')->get('external_reference_track');
+  $node = $form_state->getFormObject()->getEntity();
+  // Verifying if the new node should by onlyone.
+  if (isset($external_reference_track) && in_array($node->getType(), array_keys($external_reference_track))) {
+    // If we are trying to create a new node.
+    if ($node->isNew()) {
+
+    }
+    else {
+
+    }
+    // Adding the form element.
+    $form['external_reference_title'] = [
+      '#type' => 'textfield',
+      '#title' => t('External Reference'),
+      '#default_value' => '',
+      '#autocomplete_route_name' => 'external_reference.lieux_autocomplete',
+      '#weight' => 100,
+    ];
+  }
+
+  $form['actions']['submit']['#submit'][] = '_external_reference_form_node_submit';
+  $form['actions']['publish']['#submit'][] = '_external_reference_form_node_submit';
+  $form['actions']['unpublish']['#submit'][] = '_external_reference_form_node_submit';
+}
+
+/**
+ * Custom submit handler to save the external reference info.
+ *
+ * @param array $form
+ *   The form element.
+ * @param FormStateInterface $form_state
+ *   The form state.
+ */
+function _external_reference_form_node_submit(array &$form, FormStateInterface $form_state) {
+  // Getting the form values.
+  $title = $form_state->getValue('external_reference_title');
+
+  if (!empty($title)) {
+    $nid = $form_state->get('nid');
+    // Getting the config.
+    $external_reference_track = \Drupal::config('external_reference.settings')->get('external_reference_track');
+
+    $node = $form_state->getFormObject()->getEntity();
+    // Searching the endpoint.
+    $endpoint_individual = $external_reference_track[$node->getType()]['endpoint_individual'];
+    // Upserting the information.
+    $connection = \Drupal::database();
+    $connection->upsert('external_reference')
+      ->key('nid')
+      ->fields(['nid', 'external_id'])
+      ->values([
+        'nid' => $nid,
+        'external_id' => 1,
+      ])->execute();
+  }
 }

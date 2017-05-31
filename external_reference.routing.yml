@@ -1,0 +1,7 @@
+external_reference.lieux_autocomplete:
+  path: '/external_reference/ajax/lieux_autocomplete'
+  defaults:
+    _controller: '\Drupal\external_reference\Controller\ExternalReferenceAutocompleteController::lieuxAutocomplete'
+    _title: 'Autocomplete'
+  requirements:
+    _permission: 'access content'
