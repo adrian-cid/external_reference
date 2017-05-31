@@ -7,6 +7,9 @@
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\node\Entity\NodeType;
+use \Drupal\Core\Entity\EntityInterface;
+use \Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 
 /**
  * Implements hook_help().
@@ -257,5 +260,35 @@ function _external_reference_form_node_submit(array &$form, FormStateInterface $
         'nid' => $nid,
         'external_id' => 1,
       ])->execute();
+  }
+}
+
+/**
+ * Implements hook_entity_extra_field_info().
+ */
+function external_reference_entity_extra_field_info() {
+  $extra = [];
+
+  foreach (NodeType::loadMultiple() as $bundle) {
+
+    $extra['node'][$bundle->Id()]['display']['external_reference'] = array(
+      'label' => t('External Reference'),
+      'description' => t('The external reference title'),
+      'weight' => 100,
+      'visible' => FALSE,
+    );
+  }
+  return $extra;
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_view().
+ */
+function external_reference_node_view(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display, $view_mode, $langcode) {
+  if ($display->getComponent('external_reference')) {
+    $build['external_reference'] = [
+      '#type' => 'markup',
+      '#markup' => 'This is my custom content',
+    ];
   }
 }
