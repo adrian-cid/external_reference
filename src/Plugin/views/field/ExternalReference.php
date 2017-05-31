@@ -45,7 +45,25 @@ class ExternalReference extends FieldPluginBase {
    */
   public function render(ResultRow $values) {
     $node = $values->_entity;
-    return $node->id();
+    // Searching the id.
+    $connection = \Drupal::database();
+    $info = $connection->select('external_reference', 'er')
+      ->fields('er', ['external_id'])
+      ->condition('er.nid', $node->id())
+      ->execute()
+      ->fetchAssoc();
+
+    // Geting the config.
+    $config = \Drupal::config('external_reference.settings');
+    // Getting the content types to track variable.
+    $external_reference_track = $config->get('external_reference_track');
+    $endpoint_individual = $external_reference_track[$node->getType()]['endpoint_individual'];
+
+    $json = file_get_contents($endpoint_individual . $info['external_id']);
+    $element = json_decode($json);
+    $title = $element->title;
+
+    return $title;
   }
 
 }

@@ -4,7 +4,6 @@
  * @file
  * Contains external_reference.module.
  */
-
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\node\Entity\NodeType;
@@ -166,7 +165,7 @@ function _external_reference_save_content_type_config($content_type, $endpoint_l
   $external_reference_track = $config->get('node_revision_delete_track');
   // Creating the content type info.
   $content_type_info = [
-    'endpoint_list' => $endpoint_list,
+    'endpoint_list' => rtrim($endpoint_individual, '/') . '/',
     // Adding the final /.
     'endpoint_individual' => rtrim($endpoint_individual, '/') . '/',
   ];
@@ -224,6 +223,9 @@ function external_reference_form_node_form_alter(&$form, FormStateInterface &$fo
       '#autocomplete_route_name' => 'external_reference.lieux_autocomplete',
       '#weight' => 100,
     ];
+    // Saving the actual content type.
+    $sesion = \Drupal::service('user.private_tempstore')->get('external_reference');
+    $sesion->set('content_type', $node->getType());
   }
 
   $form['actions']['submit']['#submit'][] = '_external_reference_form_node_submit';
@@ -250,7 +252,13 @@ function _external_reference_form_node_submit(array &$form, FormStateInterface $
 
     $node = $form_state->getFormObject()->getEntity();
     // Searching the endpoint.
-    $endpoint_individual = $external_reference_track[$node->getType()]['endpoint_individual'];
+    $endpoint_list = $external_reference_track[$node->getType()]['endpoint_list'];
+
+    // Searching the id.
+    $json = file_get_contents($endpoint_list);
+    $list = json_decode($json);
+    $id = $list[0]->id;
+
     // Upserting the information.
     $connection = \Drupal::database();
     $connection->upsert('external_reference')
@@ -258,7 +266,7 @@ function _external_reference_form_node_submit(array &$form, FormStateInterface $
       ->fields(['nid', 'external_id'])
       ->values([
         'nid' => $nid,
-        'external_id' => 1,
+        'external_id' => $id,
       ])->execute();
   }
 }
@@ -286,9 +294,27 @@ function external_reference_entity_extra_field_info() {
  */
 function external_reference_node_view(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display, $view_mode, $langcode) {
   if ($display->getComponent('external_reference')) {
+    // Searching the id.
+    $connection = \Drupal::database();
+    $info = $connection->select('external_reference', 'er')
+      ->fields('er', ['external_id'])
+      ->condition('er.nid', $entity->id())
+      ->execute()
+      ->fetchAssoc();
+
+    // Geting the config.
+    $config = \Drupal::config('external_reference.settings');
+    // Getting the content types to track variable.
+    $external_reference_track = $config->get('external_reference_track');
+    $endpoint_individual = $external_reference_track[$entity->getType()]['endpoint_individual'];
+
+    $json = file_get_contents($endpoint_individual . $info['external_id']);
+    $element = json_decode($json);
+    $title = $element->title;
+
     $build['external_reference'] = [
       '#type' => 'markup',
-      '#markup' => 'This is my custom content',
+      '#markup' => 'External Reference: ' . $title,
     ];
   }
 }
