@@ -166,7 +166,7 @@ function _external_reference_save_content_type_config($content_type, $endpoint_l
   $external_reference_track = $config->get('node_revision_delete_track');
   // Creating the content type info.
   $content_type_info = [
-    'endpoint_list' => $endpoint_individual,
+    'endpoint_list' => $endpoint_list,
     // Adding the final /.
     'endpoint_individual' => rtrim($endpoint_individual, '/') . '/',
   ];
@@ -270,7 +270,7 @@ function _external_reference_form_node_submit(array &$form, FormStateInterface $
     $endpoint_list = $external_reference_track[$node->getType()]['endpoint_list'];
 
     // Searching the id.
-    $json = file_get_contents($endpoint_list . $title);
+    $json = file_get_contents($endpoint_list . rawurlencode($title));
     $list = json_decode($json);
     $external_id = $list->hits[0]->id;
 
