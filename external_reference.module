@@ -166,7 +166,7 @@ function _external_reference_save_content_type_config($content_type, $endpoint_l
   $external_reference_track = $config->get('node_revision_delete_track');
   // Creating the content type info.
   $content_type_info = [
-    'endpoint_list' => rtrim($endpoint_individual, '/') . '/',
+    'endpoint_list' => $endpoint_individual,
     // Adding the final /.
     'endpoint_individual' => rtrim($endpoint_individual, '/') . '/',
   ];
